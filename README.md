@@ -1,2 +1,6 @@
 # SOCDecayModel
 Soil organic carbon development and decay in natural and disturbed salt marsh environments
+
+We estimated natural decomposition rates of the fine SOC in the marsh platform using a depth-for-time substitution, where down-core changes in carbon concentration were modeled against geochronology. First, a typical one-pool model captured changes in total fine SOC concentrations. A two-pool model was developed from the persistent low and high thermogram peaks and then expanded based on thermal and isotopic data suggesting at least five compositionally distinct SOC pools. Carbon concentrations within each pool were defined as the amount of CO2 evolved over discrete temperature intervals within the thermogram. 
+
+Decomposition in the first, most thermally reactive, pool is described as first-order kinetics dictated by the carbon concentration of the pool (x) at a given time obtained from the age models (t), linear input (U) during the time within the rooting zone defined as 80 years (troot), and decay rate (k; Eq. 1-2; Manzoni et al., 2009). Subsequent SOC pools are a linear series, where a fraction (ri-1) of decomposed material from the previous pool (ki-1xi-1) is transferred to the next pool as an additional input (Eq. 3). 
