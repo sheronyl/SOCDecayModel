@@ -135,7 +135,6 @@ secondPool.parm<-rbind(secondPool.parm[secondPool.parm$C2_RMSE == min(secondPool
   mutate(C2_index = 1:nrow(.))
 
 save.image(file="FirstSecondPool.Rdata")
-rm("firstPool","firstPool.parm","secondPool")
 
 ```
 
@@ -198,8 +197,8 @@ ggplot(data.df %>% pivot_longer(cols = c('C1','C2'), names_to = 'pool'),
 ```{r summary table}
 ranges<-data.frame(matrix(ncol = 3, nrow =8))
 for (i in 1:4){
-ranges[i,]<-c(min(firstPool.parm[,i]),max(firstPool.parm[,i]),firstPool.parm[bestfit$C1_index,i])
-ranges[i+4,]<-c(min(secondPool.parm[,i]),max(secondPool.parm[,i]),secondPool.parm[bestfit$C2_index,i])
+ranges[i,]<-c(min(firstPool.parm[,i]),max(firstPool.parm[,i]),firstPool.parm[bestfitsimulations$C1_index,i])
+ranges[i+4,]<-c(min(secondPool.parm[,i]),max(secondPool.parm[,i]),secondPool.parm[bestfitsimulations$C2_index,i])
 }
 rownames(ranges)<-c('r1','k1','x01','input1','r2','k2','x02','input2')
 colnames(ranges)<-c('min','max','bestfit')
