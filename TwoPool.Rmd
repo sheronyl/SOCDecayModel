@@ -1,31 +1,44 @@
 ---
 title: "Five pool model fitting: Fixed Initial Input"
-author: "S Luk (sluk@whoi.edu), K Todd-Brown (ktoddbrown@ufl.edu)"
+author: "S. Y. Luk (sheronyl@mit.edu) and K. Todd-Brown (ktoddbrown@gmail.com)"
 date: "8/7/2019"
 output:
   pdf_document: default
   html_document: default
 ---
 
+
+# Introduction
+
+[[What we are doing in this file]]
+
 ```{r setup}
 library(tidyverse)
-library(readxl)
-library(deSolve)
-library(GGally)
+library(readxl) #double check but probably remove this
+library(deSolve) #lsoda
+library(GGally) #check to see what's used here
 library(tidyr)
 library(dplyr)
-library(mmc)
-library(SimDesign)
-
+library(kableExtra)
+library(mmc) #check to see what's used here
+library(SimDesign) #check to see what's used here
 ```
+
+[[repeat basic data description]]
 
 ```{r readData}
 #Load data file
-data.df<- read_csv(file=file.path('data', "TwoPoolDataFinal.csv"), 
-                   skip=1, #skip the headers
-                   col_names = c('time','C1','C2','ID','REP')) %>% #give the columsn better names
+data.df<- read_csv(file = file.path('data', "TwoPoolDataFinal.csv"), 
+                   skip = 1, #skip the headers
+                   col_names = c('time','C1','C2','ID','REP')) %>% #give the columes better names
   arrange(time)
 ```
+
+[[add in equations and model description]]
+
+$U_i(t)=U_{initial,i}-U_{initial,i} \frac{t}{t_{root}} \text{   if } t<t_{root}$
+
+$\frac{dx_1 (t)}{dt} = U_1 (t)-\frac{1}{\tau_1}x_1 (t)$
 
 ```{r modelFunc_with_inputs}
 NPoolModel_modInput.fn <- function(t, y, parms, ...){
@@ -37,6 +50,8 @@ NPoolModel_modInput.fn <- function(t, y, parms, ...){
   return(list(c(dy)))
 }
 ```
+
+# Parameter runs and selection
 
 ```{r fitFirstPool}
 if(!file.exists(file.path('outputs', "FirstSecondPool.Rdata"))){
@@ -135,9 +150,11 @@ if(!file.exists(file.path('outputs', "FirstSecondPool.Rdata"))){
 
 ```
 
+# Best fit simulation reruns
+
 ```{r modelDataPlot}
 
-if(!file.exists(file.path('outputs', 'TwoPoolBestFit.csv'))){
+
 #run simulation of all good model fits
 simulations <- secondPool.parm %>% 
   full_join(firstPool.parm) %>% ungroup() %>% 
@@ -150,7 +167,7 @@ simulations <- secondPool.parm %>%
           parms = list(I_max=c(firstPool.parm$C1_in[xx$C1_index], xx$C2_in), 
                        root_time=c(firstPool.parm$C1_inputtime[xx$C1_index], xx$C2_inputtime), 
                        decay = matrix(c(-firstPool.parm$C1_decay[xx$C1_index], 0,
-                       firstPool.parm$C1_decay[xx$C1_index]*xx$C2_r,-xx$C2_decay), nrow = 2, byrow = TRUE))) %>%
+                                        firstPool.parm$C1_decay[xx$C1_index]*xx$C2_r,-xx$C2_decay), nrow = 2, byrow = TRUE))) %>%
       as.data.frame
   })(.))
 
@@ -158,26 +175,29 @@ simulations <- secondPool.parm %>%
 secondPool.parm$sumRMSE<-secondPool.parm$C1_RMSE+secondPool.parm$C2_RMSE
 bestFitfinal<-secondPool.parm[secondPool.parm$sumRMSE==min(secondPool.parm$sumRMSE),]
 
-bestfitsimulations <- bestFitfinal %>% 
-  left_join(firstPool.parm) %>% ungroup() %>% 
-  mutate(index = 1:nrow(.)) %>%
-  group_by_all() %>%
-  do((function(xx){
-    lsoda(y=c(C1 = xx$C1_0, C2=xx$C2_0), 
-          times = data.df$time, 
-          func = NPoolModel_modInput.fn,
-          parms = list(I_max=c(xx$C1_in, xx$C2_in), 
-                       root_time=c(xx$C1_inputtime, xx$C2_inputtime), 
-                       decay = matrix(c(-xx$C1_decay, 0,
-                       xx$C1_decay*xx$C2_r,-xx$C2_decay), nrow = 2, byrow = TRUE))) %>%
-      as.data.frame
-  })(.))
-
-write.csv(bestfitsimulations, file="TwoPoolBestFit.csv")
+if(!file.exists(file.path('outputs', 'TwoPoolBestFit.csv'))){
+  bestfitsimulations <- bestFitfinal %>% 
+    left_join(firstPool.parm) %>% ungroup() %>% 
+    mutate(index = 1:nrow(.)) %>%
+    group_by_all() %>%
+    do((function(xx){
+      lsoda(y=c(C1 = xx$C1_0, C2=xx$C2_0), 
+            times = data.df$time, 
+            func = NPoolModel_modInput.fn,
+            parms = list(I_max=c(xx$C1_in, xx$C2_in), 
+                         root_time=c(xx$C1_inputtime, xx$C2_inputtime), 
+                         decay = matrix(c(-xx$C1_decay, 0,
+                                          xx$C1_decay*xx$C2_r,-xx$C2_decay), nrow = 2, byrow = TRUE))) %>%
+        as.data.frame
+    })(.))
+  
+  write.csv(bestfitsimulations, file="TwoPoolBestFit.csv") #write to create the figure in matlab
 }else{
   bestfitsimulations <- read_csv(file.path('outputs', 'TwoPoolBestFit.csv'))
 }
 ```
+
+# Results
 
 ```{r plot}
 ggplot(data.df %>% pivot_longer(cols = c('C1','C2'), names_to = 'pool'),
@@ -197,16 +217,38 @@ ggplot(data.df %>% pivot_longer(cols = c('C1','C2'), names_to = 'pool'),
 ```
 
 ```{r summary table}
-ranges<-data.frame(matrix(ncol = 3, nrow =8))
-for (i in 1:4){
-ranges[i,]<-c(min(firstPool.parm[,i]),max(firstPool.parm[,i]),firstPool.parm[bestfitsimulations$C1_index,i])
-ranges[i+4,]<-c(min(secondPool.parm[,i]),max(secondPool.parm[,i]),secondPool.parm[bestfitsimulations$C2_index,i])
-}
-rownames(ranges)<-c('r1','k1','x01','input1','r2','k2','x02','input2')
-colnames(ranges)<-c('min','max','bestfit')
-options(scipen=999)
-print(ranges)
+temp1 <- firstPool.parm %>%
+  mutate(C1_tau = 1/C1_decay) %>%
+  pivot_longer(cols = c('C1_tau', 'C1_0', 'C1_in')) %>%
+  group_by(name) %>%
+  dplyr::summarise(max_value = max(value), 
+            min_value = min(value),
+            bestRMSE = value[unique(bestfitsimulations$C1_index) == C1_index]) %>%
+  ungroup() %>%
+  mutate(name = recode(name,
+                       C1_tau = 'Pool 1 turnover time [yr]',
+                       C1_in = 'Pool 1 root zone input [mg-C per g-dry_soil]',
+                       C1_0 = 'Inital pool 1 size [mg-C per g-dry_soil]'))
 
+temp2 <- secondPool.parm %>%
+  mutate(C2_tau = 1/C2_decay) %>%
+  pivot_longer(cols = c('C2_r', 'C2_tau', 'C2_0', 'C2_in')) %>%
+  group_by(name) %>%
+  dplyr::summarise(max_value = max(value), 
+            min_value = min(value),
+            bestRMSE = value[unique(bestfitsimulations$C2_index) == C2_index])%>%
+  ungroup() %>%
+  mutate(name = recode(name,
+                       C2_r = 'Transfer from pool 1 to pool 2 [fraction]',
+                       C2_tau = 'Pool 2 turnover time [yr]',
+                       C2_in = 'Pool 2 root zone input [mg-C per g-dry_soil]',
+                       C2_0 = 'Inital pool 2 size [mg-C per g-dry_soil]'))
 
-write.csv(ranges, file="TwoPoolBestFitRanges.csv")
+ranges <- bind_rows(temp1, temp2)
+
+ranges %>%
+  kbl() %>%
+  kable_classic_2(full_width = F)
+
+write.csv(ranges, file=file.path('outputs', "TwoPoolBestFitRanges.csv"))
 ```

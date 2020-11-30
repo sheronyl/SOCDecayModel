@@ -1,0 +1,8 @@
+"","name","max_value","min_value","bestRMSE"
+"1","Inital pool 1 size [mg-C per g-dry_soil]",104,85,102
+"2","Pool 1 root zone input [mg-C per g-dry_soil]",0,0,0
+"3","Pool 1 turnover time [yr]",1140.5,600.5,640.5
+"4","Inital pool 2 size [mg-C per g-dry_soil]",49,40,43
+"5","Pool 2 root zone input [mg-C per g-dry_soil]",0,0,0
+"6","Transfer from pool 1 to pool 2 [fraction]",1,0,0
+"7","Pool 2 turnover time [yr]",2850.5,350.5,1250.5
