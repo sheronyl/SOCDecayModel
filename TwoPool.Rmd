@@ -1,6 +1,6 @@
 ---
 title: "Five pool model fitting: Fixed Initial Input"
-author: "K Todd-Brown (ktoddbrown@gmail.com)"
+author: "S. Y. Luk (sheronyl@mit.edu) and K. Todd-Brown (ktoddbrown@gmail.com)"
 date: "8/7/2019"
 output:
   pdf_document: default
