@@ -8,9 +8,6 @@ output:
 ---
 
 ```{r setup}
-#install necessary packages ["tidyverse","readxl","deSolve","GGally","tidyr","dplyr"]
-
-rm(list=ls())
 library(tidyverse)
 library(readxl)
 library(deSolve)
@@ -19,26 +16,24 @@ library(tidyr)
 library(dplyr)
 library(mmc)
 library(SimDesign)
-
-#set data directory with data file
-dataDir <- '/Users/SheronLuk/Documents/GitHub/DecayModeling/Rmd Final/6GITHUB'
-setwd(dataDir)
+#knitr::opts_chunk(message=FALSE)
 ```
 
 ```{r readData}
 #Load data file
-data.df<- read.csv(file="TwoPoolDataFinal.csv",  skipNul= TRUE)
-#Rename headers
-names(data.df) <- c('time','C1','C2','ID','REP')
-#Order by time
-data.df<-data.df[order(data.df$time),]
+data.df<- read_csv(file=file.path('data', "TwoPoolDataFinal.csv"), 
+                   skip=1, #skip the headers
+                   col_names = c('time','C1','C2','ID','REP')) %>% #give the columsn better names
+  arrange(time)
 ```
 
-```{r modelFunc with inputs}
+```{r modelFunc_with_inputs}
 NPoolModel_modInput.fn <- function(t, y, parms, ...){
   #for linear fit I_max+(-I_max/root_time)*t
-  dy <- ifelse(t < parms$root_time, parms$I_max-parms$I_max/parms$root_time*t, 0) + 
-    parms$decay %*% y[1:nrow(parms$decay)]
+  dy <- ifelse(t < parms$root_time, 
+               parms$I_max - parms$I_max / parms$root_time * t,
+               0) + #if we are before the root zone input 'time period' add roots
+    parms$decay %*% y[1:nrow(parms$decay)] #otherwise decay stuff
   return(list(c(dy)))
 }
 ```
