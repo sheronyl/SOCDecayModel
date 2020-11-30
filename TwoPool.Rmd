@@ -1,6 +1,6 @@
 ---
 title: "Five pool model fitting: Fixed Initial Input"
-author: "K Todd-Brown (ktoddbrown@gmail.com)"
+author: "S Luk (sluk@whoi.edu), K Todd-Brown (ktoddbrown@ufl.edu)"
 date: "8/7/2019"
 output:
   pdf_document: default
@@ -16,7 +16,7 @@ library(tidyr)
 library(dplyr)
 library(mmc)
 library(SimDesign)
-#knitr::opts_chunk(message=FALSE)
+
 ```
 
 ```{r readData}
@@ -39,101 +39,105 @@ NPoolModel_modInput.fn <- function(t, y, parms, ...){
 ```
 
 ```{r fitFirstPool}
-#Generate combination of parameters for model to run through: decay rate (k), starting_C (x0), transfer (r), input (I0), over input time within rooting zone defined as 85 years 
-firstPool <- expand.grid(list(decay_rates = 1/seq(0.5, 10000, by=10),
-                              starting_C = seq(75, 140, by=1),
-                              r=0,
-                              input=seq(0, 3, by=0.5),
-                              inputtime=85 #years for 25cm root depth
-                              )) %>%
-  group_by_all() %>%
-  do((function(xx){
-    lsoda(y=c(C=xx$starting_C), 
-          times = data.df$time, 
-          func = NPoolModel_modInput.fn,
-          parms = list(I_max=xx$input, root_time=xx$inputtime, decay = matrix(-xx$decay_rates), transfer = xx$r)) %>%
-      as.data.frame %>% 
-      mutate(C_data = data.df$C1, ID=data.df$ID, REP=data.df$REP)%>%
-      ungroup()%>%
-      dplyr::select(C,C_data,ID,REP) %>%
-      do((function(x){
-      data.frame(RMSE=sqrt(sum((x$C-x$C_data)^2)/length(x$C_data)),
-                 broom::tidy(lm(x$C_data ~ x$C)))
-      })(.))
-  })(.)) %>%
-  #Filter acceptable model fits based on linear regression of observed and modeled output. Good fit is whether intercept+/-SE overlap 0 and slope+/- overlap 1.
-  filter(estimate[term == '(Intercept)'] - std.error[term == '(Intercept)'] < 0 &
-                       estimate[term == '(Intercept)'] + std.error[term == '(Intercept)'] > 0) %>%
-  filter(estimate[term == 'x$C'] - std.error[term == 'x$C'] < 1 &
-           estimate[term == 'x$C'] + std.error[term == 'x$C'] > 1 ) 
-
-set.seed(123)
-#Filter based on lowest quartile RMSE
-firstPool.parm <- firstPool %>% 
-  filter(RMSE<summary(firstPool$RMSE)[[2]]) %>%
-  dplyr::select(r, decay_rates, starting_C, input,inputtime,RMSE) %>% 
-  unique() %>% ungroup() %>%
-  mutate(C1_index = 1:nrow(.)) %>%
-  dplyr::rename('C1_r' = 'r','C1_decay' = 'decay_rates', 'C1_0' = 'starting_C', 'C1_in' = 'input','C1_inputtime'='inputtime','C1_RMSE'='RMSE') %>%
-  #Random sampling of 50 inclusive of the minimum RMSE model run
-  sample_n(50)
-
-#Add RMSE minimum 
-firstPool.parm<-rbind(firstPool.parm[firstPool.parm$C1_RMSE == min(firstPool.parm$C1_RMSE),],firstPool.parm) %>%
-  unique()%>%
-  mutate(C1_index = 1:nrow(.))
-```
-
-```{r fit2ndpool}
-
-secondPool <- expand.grid(list(decay_rates = 1/seq(0.5, 10000, by=50),
-                              starting_C = seq(20, 50, by=1),
-                              input=seq(0, 3, by=0.5), 
-                              inputtime=85, #years for 25cm root depth
-                              r = seq(0,1, by=0.5),
-                              C1_index = firstPool.parm$C1_index)) %>% 
-  group_by_all() %>%
-  do((function(xx){
-    lsoda(y=c(C1 = firstPool.parm$C1_0[xx$C1_index], C=xx$starting_C), 
-          times = data.df$time, 
-          func = NPoolModel_modInput.fn,
-          parms = list(I_max=c(firstPool.parm$C1_in[xx$C1_index], xx$input), 
-                       root_time=c(firstPool.parm$C1_inputtime[xx$C1_index], xx$inputtime),  
-                       decay = matrix(c(-firstPool.parm$C1_decay[xx$C1_index], 0,
-                      firstPool.parm$C1_decay[xx$C1_index]*xx$r,-xx$decay_rates), nrow = 2, byrow = TRUE))) %>%
-          as.data.frame %>% 
-          mutate(C_data = data.df$C2, ID=data.df$ID, REP=data.df$REP) %>%
-          ungroup()%>%
-          dplyr::select(C,C_data,ID,REP)%>%
-          do((function(x){
+if(!file.exists(file.path('outputs', "FirstSecondPool.Rdata"))){
+  #Generate combination of parameters for model to run through: decay rate (k), starting_C (x0), transfer (r), input (I0), over input time within rooting zone defined as 85 years 
+  firstPool <- expand.grid(list(decay_rates = 1/seq(0.5, 10000, by=10),
+                                starting_C = seq(75, 140, by=1),
+                                r=0,
+                                input=seq(0, 3, by=0.5),
+                                inputtime=85 #years for 25cm root depth
+  )) %>%
+    group_by_all() %>%
+    do((function(xx){
+      lsoda(y=c(C=xx$starting_C), 
+            times = data.df$time, 
+            func = NPoolModel_modInput.fn,
+            parms = list(I_max=xx$input, root_time=xx$inputtime, decay = matrix(-xx$decay_rates), transfer = xx$r)) %>%
+        as.data.frame %>% 
+        mutate(C_data = data.df$C1, ID=data.df$ID, REP=data.df$REP)%>%
+        ungroup()%>%
+        dplyr::select(C,C_data,ID,REP) %>%
+        do((function(x){
           data.frame(RMSE=sqrt(sum((x$C-x$C_data)^2)/length(x$C_data)),
-                 broom::tidy(lm(x$C_data ~ x$C)))
-          })(.))
-  })(.)) %>% 
-  filter(estimate[term == '(Intercept)'] - std.error[term == '(Intercept)'] < 0 &
-                       estimate[term == '(Intercept)'] + std.error[term == '(Intercept)'] > 0) %>%
-  filter(estimate[term == 'x$C'] - std.error[term == 'x$C'] < 1 &
-           estimate[term == 'x$C'] + std.error[term == 'x$C'] > 1 ) 
-
-set.seed(123)
-secondPool.parm <- secondPool %>% 
-  filter(RMSE<summary(secondPool$RMSE)[[2]]) %>% 
-  ungroup() %>%
-  dplyr::select(r,decay_rates,starting_C,input,inputtime,RMSE,C1_index) %>% 
-  unique() %>% 
-  rename('C2_r'='r','C2_decay' = 'decay_rates', 'C2_0' = 'starting_C', 'C2_in' = 'input', 'C2_inputtime' = 'inputtime','C2_RMSE'='RMSE') %>%
-  left_join(firstPool.parm) %>%
-  sample_n(50)
-
-secondPool.parm<-rbind(secondPool.parm[secondPool.parm$C2_RMSE == min(secondPool.parm$C2_RMSE),],secondPool.parm) %>%
-  unique()%>%
-  mutate(C2_index = 1:nrow(.))
-
-save.image(file="FirstSecondPool.Rdata")
+                     broom::tidy(lm(x$C_data ~ x$C)))
+        })(.))
+    })(.)) %>%
+    #Filter acceptable model fits based on linear regression of observed and modeled output. Good fit is whether intercept+/-SE overlap 0 and slope+/- overlap 1.
+    filter(estimate[term == '(Intercept)'] - std.error[term == '(Intercept)'] < 0 &
+             estimate[term == '(Intercept)'] + std.error[term == '(Intercept)'] > 0) %>%
+    filter(estimate[term == 'x$C'] - std.error[term == 'x$C'] < 1 &
+             estimate[term == 'x$C'] + std.error[term == 'x$C'] > 1 ) 
+  
+  set.seed(123)
+  #Filter based on lowest quartile RMSE
+  firstPool.parm <- firstPool %>% 
+    filter(RMSE<summary(firstPool$RMSE)[[2]]) %>%
+    dplyr::select(r, decay_rates, starting_C, input,inputtime,RMSE) %>% 
+    unique() %>% ungroup() %>%
+    mutate(C1_index = 1:nrow(.)) %>%
+    dplyr::rename('C1_r' = 'r','C1_decay' = 'decay_rates', 'C1_0' = 'starting_C', 'C1_in' = 'input','C1_inputtime'='inputtime','C1_RMSE'='RMSE') %>%
+    #Random sampling of 50 inclusive of the minimum RMSE model run
+    sample_n(50)
+  
+  #Add RMSE minimum 
+  firstPool.parm<-rbind(firstPool.parm[firstPool.parm$C1_RMSE == min(firstPool.parm$C1_RMSE),],firstPool.parm) %>%
+    unique()%>%
+    mutate(C1_index = 1:nrow(.))
+  
+  
+  secondPool <- expand.grid(list(decay_rates = 1/seq(0.5, 10000, by=50),
+                                 starting_C = seq(20, 50, by=1),
+                                 input=seq(0, 3, by=0.5), 
+                                 inputtime=85, #years for 25cm root depth
+                                 r = seq(0,1, by=0.5),
+                                 C1_index = firstPool.parm$C1_index)) %>% 
+    group_by_all() %>%
+    do((function(xx){
+      lsoda(y=c(C1 = firstPool.parm$C1_0[xx$C1_index], C=xx$starting_C), 
+            times = data.df$time, 
+            func = NPoolModel_modInput.fn,
+            parms = list(I_max=c(firstPool.parm$C1_in[xx$C1_index], xx$input), 
+                         root_time=c(firstPool.parm$C1_inputtime[xx$C1_index], xx$inputtime),  
+                         decay = matrix(c(-firstPool.parm$C1_decay[xx$C1_index], 0,
+                                          firstPool.parm$C1_decay[xx$C1_index]*xx$r,-xx$decay_rates), nrow = 2, byrow = TRUE))) %>%
+        as.data.frame %>% 
+        mutate(C_data = data.df$C2, ID=data.df$ID, REP=data.df$REP) %>%
+        ungroup()%>%
+        dplyr::select(C,C_data,ID,REP)%>%
+        do((function(x){
+          data.frame(RMSE=sqrt(sum((x$C-x$C_data)^2)/length(x$C_data)),
+                     broom::tidy(lm(x$C_data ~ x$C)))
+        })(.))
+    })(.)) %>% 
+    filter(estimate[term == '(Intercept)'] - std.error[term == '(Intercept)'] < 0 &
+             estimate[term == '(Intercept)'] + std.error[term == '(Intercept)'] > 0) %>%
+    filter(estimate[term == 'x$C'] - std.error[term == 'x$C'] < 1 &
+             estimate[term == 'x$C'] + std.error[term == 'x$C'] > 1 ) 
+  
+  set.seed(123)
+  secondPool.parm <- secondPool %>% 
+    filter(RMSE<summary(secondPool$RMSE)[[2]]) %>% 
+    ungroup() %>%
+    dplyr::select(r,decay_rates,starting_C,input,inputtime,RMSE,C1_index) %>% 
+    unique() %>% 
+    rename('C2_r'='r','C2_decay' = 'decay_rates', 'C2_0' = 'starting_C', 'C2_in' = 'input', 'C2_inputtime' = 'inputtime','C2_RMSE'='RMSE') %>%
+    left_join(firstPool.parm) %>%
+    sample_n(50)
+  
+  secondPool.parm<-rbind(secondPool.parm[secondPool.parm$C2_RMSE == min(secondPool.parm$C2_RMSE),],secondPool.parm) %>%
+    unique()%>%
+    mutate(C2_index = 1:nrow(.))
+  
+  save.image(file=file.path('outputs', "FirstSecondPool.Rdata"))
+}else{
+  load(file.path('outputs', "FirstSecondPool.Rdata"))
+}
 
 ```
 
 ```{r modelDataPlot}
+
+if(!file.exists(file.path('outputs', 'TwoPoolBestFit.csv'))){
 #run simulation of all good model fits
 simulations <- secondPool.parm %>% 
   full_join(firstPool.parm) %>% ungroup() %>% 
@@ -168,8 +172,11 @@ bestfitsimulations <- bestFitfinal %>%
                        xx$C1_decay*xx$C2_r,-xx$C2_decay), nrow = 2, byrow = TRUE))) %>%
       as.data.frame
   })(.))
-write.csv(bestfitsimulations, file="TwoPoolBestFit.csv")
 
+write.csv(bestfitsimulations, file="TwoPoolBestFit.csv")
+}else{
+  bestfitsimulations <- read_csv(file.path('outputs', 'TwoPoolBestFit.csv'))
+}
 ```
 
 ```{r plot}
@@ -200,7 +207,6 @@ colnames(ranges)<-c('min','max','bestfit')
 options(scipen=999)
 print(ranges)
 
-#write.csv(ranges, file="TwoPoolBestFitRanges1208.csv")
-#changed file name for consistency
+
 write.csv(ranges, file="TwoPoolBestFitRanges.csv")
 ```
