@@ -1,0 +1,20 @@
+"","name","max_value","min_value","bestRMSE"
+"1","Inital pool 1 size [mg-C per g-dry_soil]",53,49,49
+"2","Pool 1 root zone input [mg-C per g-dry_soil]",0,0,0
+"3","Pool 1 turnover time [yr]",2210.5,1010.5,1010.5
+"4","Inital pool 2 size [mg-C per g-dry_soil]",42,35,35
+"5","Pool 2 root zone input [mg-C per g-dry_soil]",0,0,0
+"6","Transfer from pool 1 to pool 2 [fraction]",1,0,0
+"7","Pool 2 turnover time [yr]",5950.5,600.5,5350.5
+"8","Inital pool 2 size [mg-C per g-dry_soil]",20,19,19
+"9","Pool 2 root zone input [mg-C per g-dry_soil]",0,0,0
+"10","Transfer from pool 2 to pool 3 [fraction]",1,0,1
+"11","Pool 2 turnover time [yr]",9850.5,1300.5,2200.5
+"12","Inital pool 4 size [mg-C per g-dry_soil]",15,14,15
+"13","Pool 4 root zone input [mg-C per g-dry_soil]",0,0,0
+"14","Transfer from pool 3 to pool 4 [fraction]",1,0.5,1
+"15","Pool 4 turnover time [yr]",9800.5,1700.5,3400.5
+"16","Inital pool 5 size [mg-C per g-dry_soil]",14,13,14
+"17","Pool 5 root zone input [mg-C per g-dry_soil]",0,0,0
+"18","Transfer from pool 4 to pool 5 [fraction]",1,0.5,1
+"19","Pool 5 turnover time [yr]",9950.5,2350.5,9950.5

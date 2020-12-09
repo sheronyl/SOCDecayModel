@@ -9,23 +9,18 @@ output:
 
 
 # Introduction
-
-[[What we are doing in this file]]
+In the two pool model, we estimated turnover times of fine SOC in the marsh platform using a depth-for-time substitution where down-core changes in carbon concentration were modeled against geochronology. The two-pool model was developed from the persistent low and high temperature thermogram peaks from ramped pyrolysis oxidation of Plum Island Ecosystem - Long Term Ecological Reserve domain marsh soils. Turnover of the first pool is described as first-order kinetics dictated by the carbon concentration of the pool at a given time (obtained by age models), linear input (U) during the time within the root zone (troot) and turnover time. Subsequent pools are a linear series where a fraction (r) of decomposed material from the previous pool is transferred to the next pool. 
 
 ```{r setup}
 library(tidyverse)
-library(readxl) #double check but probably remove this
 library(deSolve) #lsoda
-library(GGally) #check to see what's used here
 library(tidyr)
 library(dplyr)
 library(kableExtra)
-library(mmc) #check to see what's used here
-library(SimDesign) #check to see what's used here
 ```
 
-[[repeat basic data description]]
-
+#Data Description
+Here, we load the two pool data from ramped pyrolysis oxidation. Due to large age estimates for each soil horizon we included the mean, min, max of each soil horizon in the dataset to be estimated by the model. Time is defined as the soil age horizon estimate. The first and second pool in mg C per g dry sediment is defined in C1 and C2, respectively. A unique identifier for each soil horizon (ID) was provided, which each have a min (REP=1), mean (REP=2), max(REP=3) age estimate.
 ```{r readData}
 #Load data file
 data.df<- read_csv(file = file.path('data', "TwoPoolDataFinal.csv"), 
@@ -34,7 +29,7 @@ data.df<- read_csv(file = file.path('data', "TwoPoolDataFinal.csv"),
   arrange(time)
 ```
 
-[[add in equations and model description]]
+Turnover of the first pool is described as first-order kinetics dictated by the carbon concentration of the pool at a given time (t, obtained by age models), linear input (U) during the time within the root zone (troot) and turnover time (tau). Subsequent pools are a linear series where a fraction (r) of decomposed material from the previous pool is transferred to the next pool. 
 
 $U_i(t)=U_{initial,i}-U_{initial,i} \frac{t}{t_{root}} \text{   if } t<t_{root}$
 
@@ -46,7 +41,7 @@ NPoolModel_modInput.fn <- function(t, y, parms, ...){
   dy <- ifelse(t < parms$root_time, 
                parms$I_max - parms$I_max / parms$root_time * t,
                0) + #if we are before the root zone input 'time period' add roots
-    parms$decay %*% y[1:nrow(parms$decay)] #otherwise decay stuff
+    parms$decay %*% y[1:nrow(parms$decay)] #otherwise decay
   return(list(c(dy)))
 }
 ```
@@ -54,7 +49,7 @@ NPoolModel_modInput.fn <- function(t, y, parms, ...){
 # Parameter runs and selection
 
 ```{r fitFirstPool}
-if(!file.exists(file.path('outputs', "FirstSecondPool.Rdata"))){
+if(!file.exists(file.path('outputs', "TwoPoolFirstSecondPool.Rdata"))){
   #Generate combination of parameters for model to run through: decay rate (k), starting_C (x0), transfer (r), input (I0), over input time within rooting zone defined as 85 years 
   firstPool <- expand.grid(list(decay_rates = 1/seq(0.5, 10000, by=10),
                                 starting_C = seq(75, 140, by=1),
@@ -143,9 +138,9 @@ if(!file.exists(file.path('outputs', "FirstSecondPool.Rdata"))){
     unique()%>%
     mutate(C2_index = 1:nrow(.))
   
-  save.image(file=file.path('outputs', "FirstSecondPool.Rdata"))
+  save.image(file=file.path('outputs', "TwoPoolFirstSecondPool.Rdata"))
 }else{
-  load(file.path('outputs', "FirstSecondPool.Rdata"))
+  load(file.path('outputs', "TwoPoolFirstSecondPool.Rdata"))
 }
 
 ```
@@ -216,6 +211,7 @@ ggplot(data.df %>% pivot_longer(cols = c('C1','C2'), names_to = 'pool'),
   facet_wrap(~pool)
 ```
 
+# Summary Table of results for best fit, min, and max estimates for turnover time (tau), root inputs (U), initial pool size (x0), and fraction transferred from pool 1 (r).
 ```{r summary table}
 temp1 <- firstPool.parm %>%
   mutate(C1_tau = 1/C1_decay) %>%

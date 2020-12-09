@@ -1,1 +1,5 @@
-Describe each of the output files; what md did it come from and what does that file contain?
+README: outputs
+These files were generated from the TwoPool.Rmd. 
+1. FirstSecondPool.Rdata: This is the R dataset that includes model runs for the first and second pool model that fit the observed data.
+2. TwoPoolBestFit.csv: This is estimated concentrations of pool 1 (C1) and pool 2 (C2) for the best fit two pool model based on minimizing RMSE. Included are the parameters for the best fit model. The second pool transfer fraction (C2_r), decay rate (C2_decay), initial pool size (C2_0), input within the rooting zone (C1_in), time within the rooting zone (C2_inputtime), and RMSE of second pool (C2_RMSE). The first pool parameters include first pool transfer (C1_r, which is fixed at 0), decay rate (C1_decay), initial pool size (C1_0), inputs within rooting zone (C1_in), time within the rooting zone (C1_inputtime).
+3. TwoPoolBestFitRanges.csv: This includes the fit parameter ranges for the two pool model. This includes the maximum fit parameter value (Max_value), minimum fit parameter value (min_value), and the best fit parameter value based on minimizing RMSE (bestRMSE). 
